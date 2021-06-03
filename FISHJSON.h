@@ -37,7 +37,7 @@ struct fish_member {
 
 /*JSON½âÎö*/
 int fish_parse(fish_value* v, const char* json);
-
+char* fish_stringify(const fish_value* v, unsigned int* length);
 
 double fish_get_number(const fish_value* v);
 void fish_set_number(fish_value* v, double n);
@@ -59,7 +59,6 @@ unsigned int fish_get_object_key_len(const fish_value* v, unsigned int pos);
 fish_value* fish_get_object_value(const fish_value* v, unsigned int pos);
 
 fish_type fish_get_type(const fish_value* v);
-
 
 void fish_free(fish_value* v);
 #define fish_init(v) do{(v)->type=FISH_NULL;}while(0)

@@ -14,6 +14,7 @@
 
 #define EXPECT(c, ch)       do { assert(*c->json == (ch)); c->json++; } while(0)
 #define PUTC(c, ch)         do { *(char*)fish_context_push(c, sizeof(char)) = (ch); } while(0)
+#define PUTS(c,s,len)		do { memcpy(fish_context_push(c, len), s, len);} while(0)
 #ifndef FISH_PARSE_STACK_INIT_SIZE
 #define FISH_PARSE_STACK_INIT_SIZE 256
 #endif
@@ -38,8 +39,8 @@ static void* fish_context_push(fish_context* c, unsigned int size) {
 			c->size = FISH_PARSE_STACK_INIT_SIZE;
 		while (c->top + size >= c->size)/*参考C++ STL vector  优化 2倍扩展变1.5倍扩展*/
 			c->size += c->size >> 1;
-		void* new_ptr = (char*)realloc(c->stack, c->size);
-		if (!new_ptr) {
+		void* new_ptr= (char*)realloc(c->stack, c->size);
+		if (new_ptr == NULL) {
 			free(new_ptr);
 			puts("FISH_CONTEXT_PUSH_CAN_NOT_REALLOC!");
 		}
@@ -52,6 +53,7 @@ static void* fish_context_push(fish_context* c, unsigned int size) {
 	return ret;
 }
 
+static void fish_stringify_value(fish_context* c, const fish_value* v);
 /*弹出堆栈*/
 static void* fish_context_pop(fish_context* c, unsigned int size) {
 	assert(c->top >= size);
@@ -140,7 +142,7 @@ void fish_set_number(fish_value* v, double n) {
 	v->type = FISH_NUMBER;
 }
 
-/*解析string*/
+/*解析string-解析部分*/
 static int fish_parse_string_raw(fish_context* c, char** str, unsigned int* len) {
 	unsigned int head = c->top;
 	const char* p;
@@ -186,6 +188,7 @@ static int fish_parse_string_raw(fish_context* c, char** str, unsigned int* len)
 		}
 	}
 }
+/*解析字符串-复制到v中*/
 static int fish_parse_string(fish_context* c, fish_value* v) {
 	int ret;
 	char* s;
@@ -269,16 +272,16 @@ static int fish_parse_object(fish_context* c, fish_value* v) {
 	for (;;) {
 		fish_init(&m.v);
 		char* str;
-
 		/*解析key*/
 		if (*c->json != '"') {
 			ret = FISH_PARSE_MISS_KEY;
-			break;		}
-		
+			break;
+		}
 		if ((ret = fish_parse_string_raw(c, &str,&m.key_len)) != FISH_PARSE_OK)
 			break;
 		memcpy(m.key = (char*)malloc(m.key_len + 1), str, m.key_len);
 		m.key[m.key_len] = '\0';
+		
 		/*解析冒号*/
 		fish_parse_whitespace(c);
 		if (*c->json != ':') {
@@ -362,6 +365,84 @@ int fish_parse(fish_value* v, const char* json) {
 	return ret;
 }
 
+/*生成数字*/
+static void fish_stringify_number(fish_context* c, const fish_value* v) {
+	assert(v != NULL&&v->type==FISH_NUMBER);
+	char buf[256];
+	unsigned int length = snprintf(buf,sizeof(buf), "%.17g", v->n);
+	PUTS(c, buf, length);
+}
+/*生成字符串*/
+static void fish_stringify_string(fish_context* c, const char* s, unsigned int len) {
+	assert(s != NULL);
+	PUTC(c, '"');
+	for (unsigned int i = 0; i < len; i++) {
+		unsigned char ch = s[i];
+		switch (ch)
+		{
+			case '\"': PUTS(c, "\\\"", 2); break;
+			case '\\': PUTS(c, "\\\\", 2); break;
+			case '\b': PUTS(c, "\\b", 2); break;
+			case '\f': PUTS(c, "\\f", 2); break;
+			case '\n': PUTS(c, "\\n", 2); break;
+			case '\r': PUTS(c, "\\r", 2); break;
+			case '\t': PUTS(c, "\\t", 2); break;
+			default:   PUTC(c, s[i]);
+		}
+	}
+	PUTC(c, '"');
+}
+/*生成数组*/
+static void fish_stringify_array(fish_context* c, const fish_value* v) {
+	assert(v != NULL&&v->type==FISH_ARRAY);
+	PUTC(c, '[');
+	for (unsigned int i = 0; i < v->arr_size; i++) {
+		if (i)PUTC(c, ',');
+		fish_stringify_value(c, &v->e[i]);
+	}
+	PUTC(c, ']');
+}
+/*生成对象*/
+static void fish_stringify_object(fish_context* c, const fish_value* v) {
+	assert(v != NULL&&v->type==FISH_OBJECT);
+	PUTC(c, '{');
+	for (unsigned int i = 0; i < v->obj_size; i++) {
+		if (i)PUTC(c, ',');
+		fish_stringify_string(c, v->m[i].key, v->m[i].key_len);
+		PUTC(c, ':');
+		fish_stringify_value(c, &v->m[i].v);
+		/*6.3 bug定位，object生成测试，fish_stringify_value传参错误*/
+	}
+	PUTC(c, '}');
+}
+
+/*生成value*/
+static void fish_stringify_value(fish_context* c, const fish_value* v) {
+	assert(v != NULL);
+	switch (v->type) {
+	case FISH_NULL:		PUTS(c, "null", 4); break;
+	case FISH_TRUE:		PUTS(c, "true", 4); break;
+	case FISH_FALSE:	PUTS(c, "false", 5); break;
+	case FISH_NUMBER:	fish_stringify_number(c, v); break;
+	case FISH_STRING:	fish_stringify_string(c, v->s, v->len); break;
+	case FISH_ARRAY:	fish_stringify_array(c, v); break;
+	case FISH_OBJECT:	fish_stringify_object(c, v); break;
+	default:			assert(0 && "invalid type"); 
+	}
+}
+
+/*JSON-文本生成*/
+char* fish_stringify(const fish_value* v, unsigned int* length) {
+	assert(v != NULL);
+	fish_context c;
+	c.stack = (char*)malloc(c.size = FISH_PARSE_STRINGIFY_INIT_SIZE);
+	c.top = 0;
+	fish_stringify_value(&c, v);
+	if (length)*length = c.top;
+	PUTC(&c, '\0');
+	return c.stack;
+}
+
 /*内存管理*/
 void fish_free(fish_value* v){
 	assert(v != NULL);
@@ -383,7 +464,7 @@ void fish_free(fish_value* v){
 			break;
 		default: break;
 	}
-	v->type = FISH_NULL;//避免重复释放
+	v->type = FISH_NULL;//避免重复释放 狗牌标记
 }
 
 /* 获取结构体fish_value里的信息 */
@@ -443,4 +524,3 @@ fish_value* fish_get_object_value(const fish_value* v, unsigned int pos) {
 	assert(v != NULL && v->type == FISH_OBJECT && pos < v->obj_size);
 	return &v->m[pos].v;
 }
-
