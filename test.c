@@ -453,5 +453,31 @@ int main() {
     #endif
     test_parse();
     printf("%d/%d (%3.2f%%) passed\n", test_pass, test_count, test_pass * 100.0 / test_count);
+
+    /*文件操作演示*/
+    fish_value v;
+    fish_init(&v);
+    FILE* fp1,*fp2;
+    errno_t error;
+    error=fopen_s(&fp1, "C:\\Users\\ZSL\\Desktop\\a.txt", "r");
+    if (error != 0) {
+        printf("打开文件失败\n");
+    }
+    else {
+        fish_parse_file(&v, fp1);
+
+        char* json2;
+        unsigned int* length;
+        json2 = fish_stringify(&v, &length);
+        printf("\n%s\n", json2);
+    }
+    error = fopen_s(&fp2, "C:\\Users\\ZSL\\Desktop\\b.txt", "w");
+    if (error != 0) {
+        printf("打开文件失败\n");
+    }
+    else {
+        fish_stringify_file(&v, fp2);
+        puts("OK");
+    }
     return main_ret;
 }

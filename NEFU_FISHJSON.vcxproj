@@ -22,7 +22,6 @@
     <ClInclude Include="FISHJSON.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="demo.c" />
     <ClCompile Include="FISHJSON.c" />
     <ClCompile Include="test.c" />
   </ItemGroup>

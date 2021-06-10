@@ -23,6 +23,10 @@
 #define FISH_PARSE_STRINGIFY_INIT_SIZE 256
 #endif
 
+
+#ifndef FISH_FILE_BUFFER 1024
+#define FISH_FILE_BUFFER 1024
+#endif
 typedef struct {
 	const char* json;
 	/*c语言实现混合类型堆栈,参考RapidJSON库*/
@@ -54,6 +58,7 @@ static void* fish_context_push(fish_context* c, unsigned int size) {
 }
 
 static void fish_stringify_value(fish_context* c, const fish_value* v);
+
 /*弹出堆栈*/
 static void* fish_context_pop(fish_context* c, unsigned int size) {
 	assert(c->top >= size);
@@ -102,37 +107,54 @@ static int fish_parse_null(fish_context* c, fish_value* v){
 	return FISH_PARSE_OK;
 }
 
+/*有限状态机校验数字*/
+static int fish_check_number(fish_context* c,int* offset) {
+	static const int stateTable[][6] =
+	{//"1-9", "0", "-", '+', ".", "e/E"
+		{ 2,   3,   1,  -1,  -1,  -1 },//#0
+		{ 2,   3,  -1,  -1,  -1,  -1 },//#1
+		{ 2,   2,  -2,  -2,   4,   6 },//#2
+		{-2,  -2,  -2,  -2,   4,  -1 },//#3
+		{ 5,   5,  -1,  -1,  -1,  -1 },//#4
+		{ 5,   5,  -2,  -2,  -2,   6 },//#5
+		{ 8,   8,   7,   7,  -1,  -1 },//#6
+		{ 8,   8,  -1,  -1,  -1,  -1 },//#7
+		{ 8,   8,  -2,  -2,  -2,  -2 },//#8
+	};
+	int i,state = 0;
+	for (i = 0; c->json[i] != '\0'; i++)
+	{
+		int input;
+		if (isdigit(c->json[i]) && c->json[i] != '0')       input = 0;
+		else if (c->json[i] == '0')                         input = 1;
+		else if (c->json[i] == '-')                         input = 2;
+		else if (c->json[i] == '+')                         input = 3;
+		else if (c->json[i] == '.')                         input = 4;
+		else if (c->json[i] == 'e' || c->json[i] == 'E')    input = 5;
+		else break;
+
+		if ((state = stateTable[state][input]) < 0)     break;
+	}
+	*offset = i;
+	return state;
+}
 /*解析数字*/
 static int fish_parse_number(fish_context* c, fish_value* v) {
 	/*数字校验是否符合JSON数字类型的语法要求*/
-	char* p = c->json;
-	if (*p == '-')p++;
-	if (*p == '0')p++;
-	else {
-		if (!isdigit(*p)||*p=='0')return FISH_PARSE_INVALID_VALUE;
-		for (p++; isdigit(*p); p++);
-	}
-	if (*p == '.') {
-		p++;
-		if (!isdigit(*p))return FISH_PARSE_INVALID_VALUE;
-		for (p++; isdigit(*p); p++);
-	}
-	if (*p == 'e' || *p == 'E') {
-		p++;
-		if (*p == '+' || *p == '-')p++;
-		if (!isdigit(*p))return FISH_PARSE_INVALID_VALUE;
-		for (p++; isdigit(*p); p++);
-	}
-	errno = 0;
+	int offset = 0;
+	int state = fish_check_number(c,&offset);
+	if (state == 2 || state == 3 || state == 5 || state == 8 || state == -2)
+	{
+		errno = 0;
+		v->n = strtod(c->json, NULL);
+		if (errno == ERANGE && (v->n == HUGE_VAL || v->n == -HUGE_VAL))
+			return FISH_PARSE_NUMBER_TOO_BIG;
 
-	v->n = strtod(c->json, NULL);
-	/*判是否数字太大了*/
-	if (errno == ERANGE &&( v->n == HUGE_VAL||v->n==-HUGE_VAL))return FISH_PARSE_NUMBER_TOO_BIG;
-	if (c->json == NULL)
-		return FISH_PARSE_INVALID_VALUE;
-	c->json = p;
-	v->type = FISH_NUMBER;
-	return FISH_PARSE_OK;
+		v->type = FISH_NUMBER;
+		c->json += offset;
+		return FISH_PARSE_OK;
+	}
+	return FISH_PARSE_INVALID_VALUE;
 }
 
 /*设置数字*/
@@ -364,7 +386,14 @@ int fish_parse(fish_value* v, const char* json) {
 	free(c.stack);
 	return ret;
 }
-
+/*JSON-文本解析-文件*/
+int fish_parse_file(fish_value* v,const FILE* fp) {
+	assert(v != NULL && fp != NULL);
+	char json[FISH_FILE_BUFFER];
+	fgets(json, FISH_FILE_BUFFER, fp);
+	int ret = fish_parse(v, json);
+	return ret;
+}
 /*生成数字*/
 static void fish_stringify_number(fish_context* c, const fish_value* v) {
 	assert(v != NULL&&v->type==FISH_NUMBER);
@@ -442,7 +471,14 @@ char* fish_stringify(const fish_value* v, unsigned int* length) {
 	PUTC(&c, '\0');
 	return c.stack;
 }
-
+/*JSON-文本生成-放入文件*/
+void fish_stringify_file(const fish_value* v,FILE* fp) {
+	assert(v != NULL&&fp!=NULL);
+	unsigned int length;
+	char* json2 = fish_stringify(v, &length);
+	fputs(json2, fp);
+	fclose(fp);
+}
 /*内存管理*/
 void fish_free(fish_value* v){
 	assert(v != NULL);

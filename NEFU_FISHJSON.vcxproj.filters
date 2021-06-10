@@ -26,8 +26,5 @@
     <ClCompile Include="FISHJSON.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="demo.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
