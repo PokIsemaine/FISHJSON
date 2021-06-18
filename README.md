@@ -40,19 +40,19 @@ FISHJSON主要为有处理JSON数据需求的C语言开发者提供便利
 
 主体库文件，包含了FISHJSON各种API的具体实现。
 
-![image-20210618104253882](C:\Users\ZSL\AppData\Roaming\Typora\typora-user-images\image-20210618104253882.png)
+![image-20210618104253882](https://github.com/PokIsemaine/FISHJSON/blob/main/image-20210618104253882.png)
 
 **FISHJSON.h**
 
 头文件，包含了FISHJSON库的主要函数声明，以及FISHJSON的数据结构。
 
-![image-20210618104344240](C:\Users\ZSL\AppData\Roaming\Typora\typora-user-images\image-20210618104344240.png)
+![image-20210618104344240](https://github.com/PokIsemaine/FISHJSON/blob/main/image-20210618104344240.png)
 
 **test.c**
 
 测试文件，包含了开发过程中的测试样例。同时您可以通过test文件学习每个API的使用方法
 
-![image-20210618104241183](C:\Users\ZSL\AppData\Roaming\Typora\typora-user-images\image-20210618104241183.png)
+![image-20210618104241183](https://github.com/PokIsemaine/FISHJSON/blob/main/image-20210618104241183.png)
 
 **demo.c**
 
