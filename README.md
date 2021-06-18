@@ -1,4 +1,4 @@
-# FISHJSON使用手册
+# 📖FISHJSON使用手册
 
 ## 概览
 
@@ -14,29 +14,27 @@ FISHJSON是一个基于C语言开发的，用于处理C和JSON数据的开源库
 2. 根据C语言数据结构生成JSON文本
 3. 通过C语言对JSON数据进行修改
 
-
-
 **FISHJSON为了谁**
 
 FISHJSON主要为有处理JSON数据需求的C语言开发者提供便利
 
 **FISHJSON的使用环境**
 
-Visual Studio 2019
+✅Visual Studio 2019
 
-Win10 64
+✅Win10 64
 
-ECMA-404 JSON标准
+✅ECMA-404 JSON标准
 
-## 开始
+## 🚤开始
 
-### 一、下载FISHJSON库
+### 🔍一、下载FISHJSON库
 
 您可以在GITHUB上找到FISHJSON的开源项目并下载相关文件
 
 ❤[FISHJSON](https://github.com/PokIsemaine/FISHJSON)
 
-### 二、熟悉各个文件
+### 📚二、熟悉各个文件
 
 **FISHJSON.c**
 
@@ -97,7 +95,9 @@ struct fish_member {
 int fish_parse(fish_value* v, const char* json);
 ```
 
-将JSON文本解析成C语言数据结构，注意不支持解析含UTF-8的字符串
+将JSON文本解析成C语言数据结构
+
+❎注意不支持解析含UTF-8的字符串
 
 #### **生成API**
 
@@ -107,7 +107,9 @@ int fish_parse(fish_value* v, const char* json);
 char* fish_stringify(const fish_value* v, unsigned int* length);
 ```
 
-根据C语言数据结构生成JSON文本，注意JSON文本无美化
+根据C语言数据结构生成JSON文本
+
+❎注意JSON文本无美化
 
 #### **访问API**
 
@@ -152,8 +154,8 @@ void fish_stringify_file(const fish_value* v,FILE* fp);
 
 
 
-1. fish_parse_file解析不支持UTF-8的string类型
-2. fish_stringify_file生成JSON文本没所行和美化
+1. fish_parse_file解析不支持UTF-8的string类型❎
+2. fish_stringify_file生成JSON文本没所行和美化❎
 3. 调整文件输入/输出大小
    您可以通过修改FISH_FILE_BUFFER来调整文件缓冲区大小
 
@@ -178,21 +180,7 @@ void fish_free(fish_value* v);
 你可以根据这些返回值了解程序的运行情况
 
 ```c++
-/*枚举解析的返回值*/
-enum {
-    FISH_PARSE_OK = 0,
-    FISH_PARSE_EXPECT_VALUE,
-    FISH_PARSE_INVALID_VALUE,
-    FISH_PARSE_ROOT_NOT_SINGULAR,
-    FISH_PARSE_NUMBER_TOO_BIG,
-    FISH_PARSE_MISS_QUOTATION_MARK,
-    FISH_PARSE_INVALID_STRING_ESCAPE,
-    FISH_PARSE_INVALID_STRING_CHAR,
-    FISH_PARSE_MISS_COMMA_OR_SQUARE_BRACKET,
-    FISH_PARSE_MISS_KEY,
-    FISH_PARSE_MISS_COLON,
-    FISH_PARSE_MISS_COMMA_OR_CURLY_BRACKET
-};
+/*枚举解析的返回值*/enum {    FISH_PARSE_OK = 0,    FISH_PARSE_EXPECT_VALUE,    FISH_PARSE_INVALID_VALUE,    FISH_PARSE_ROOT_NOT_SINGULAR,    FISH_PARSE_NUMBER_TOO_BIG,    FISH_PARSE_MISS_QUOTATION_MARK,    FISH_PARSE_INVALID_STRING_ESCAPE,    FISH_PARSE_INVALID_STRING_CHAR,    FISH_PARSE_MISS_COMMA_OR_SQUARE_BRACKET,    FISH_PARSE_MISS_KEY,    FISH_PARSE_MISS_COLON,    FISH_PARSE_MISS_COMMA_OR_CURLY_BRACKET};
 ```
 
 | 返回值                                  | 含义               |
@@ -212,6 +200,6 @@ enum {
 
 
 
-## 反馈
+## 🎈反馈
 
 FISHJSON起初仅仅作为一个简单的课程设计被开发出来，因此存在着一定的缺陷。如果您想反馈使用过程中的缺陷，可以直接在Github中的Issues中提出来，方便我们的更新与处理。
