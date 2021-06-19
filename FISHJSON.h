@@ -1,10 +1,10 @@
 #ifndef FISHJSON_H__
 #define FISHJSON_H__
-
-/*ö������JSON 7����������*/
+#include<stdio.h>
+/*枚举类型JSON 7种数据类型*/
 typedef enum { FISH_NULL, FISH_FALSE, FISH_TRUE, FISH_NUMBER, FISH_STRING, FISH_ARRAY, FISH_OBJECT }fish_type;
 
-/*ö�ٽ����ķ���ֵ*/
+/*枚举解析的返回值*/
 enum {
     FISH_PARSE_OK = 0,
     FISH_PARSE_EXPECT_VALUE,
@@ -19,7 +19,7 @@ enum {
     FISH_PARSE_MISS_COLON,
     FISH_PARSE_MISS_COMMA_OR_CURLY_BRACKET
 };
-/*JSON���ݽṹΪ���νṹ*/
+/*JSON数据结构为树形结构*/
 typedef struct fish_value fish_value;
 typedef struct fish_member fish_member;
 
