@@ -519,8 +519,9 @@ double fish_get_number(const fish_value* v) {
 }
 /*获取bool值*/
 int fish_get_boolean(const fish_value* v) {
-	assert(v != NULL && (v->type == FISH_TRUE || v->type == FISH_FALSE));
-	return v->type == FISH_TRUE;
+	assert(v != NULL);
+	assert(v->type == FISH_TRUE || v->type == FISH_FALSE||v->type==FISH_NULL);
+	return v->type;
 }
 /*获取字符串*/
 const char* fish_get_string(const fish_value* v) {
