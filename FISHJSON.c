@@ -6,7 +6,7 @@
 #include <string.h>
 #include <errno.h>
 
-/*¼ì²âÄÚ´æÐ¹Â¶*/
+/*æ£€æµ‹å†…å­˜æ³„éœ²*/
 #ifdef _WIN32
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
@@ -29,21 +29,21 @@
 #endif
 typedef struct {
 	const char* json;
-	/*cÓïÑÔÊµÏÖ»ìºÏÀàÐÍ¶ÑÕ»,²Î¿¼RapidJSON¿â*/
+	/*cè¯­è¨€å®žçŽ°æ··åˆç±»åž‹å †æ ˆ,å‚è€ƒRapidJSONåº“*/
 	char* stack;
-	unsigned int size, top;//ÓÉÓÚÐèÒª¶¯Ì¬À©Õ¹£¬top²»Ê¹ÓÃÖ¸ÕëÀàÐÍ£¬²¢ÇÒpushºÍpop²Ù×÷¿ÉÒÔÍ¨¹ý¼òµ¥µÄ+-À´ÊµÏÖ
+	unsigned int size, top;//ç”±äºŽéœ€è¦åŠ¨æ€æ‰©å±•ï¼Œtopä¸ä½¿ç”¨æŒ‡é’ˆç±»åž‹ï¼Œå¹¶ä¸”pushå’Œpopæ“ä½œå¯ä»¥é€šè¿‡ç®€å•çš„+-æ¥å®žçŽ°
 }fish_context;
 
-/*Ñ¹Èë¶ÑÕ»£¬·µ»ØÖµÎªÊý¾ÝÍ·Ö¸ÕëÎ»ÖÃ*/
+/*åŽ‹å…¥å †æ ˆï¼Œè¿”å›žå€¼ä¸ºæ•°æ®å¤´æŒ‡é’ˆä½ç½®*/
 static void* fish_context_push(fish_context* c, unsigned int size) {
 	void* ret;
 	assert(size > 0);
 	if (c->top + size >= c->size) {
 		if (c->size == 0)
 			c->size = FISH_PARSE_STACK_INIT_SIZE;
-		while (c->top + size >= c->size)/*²Î¿¼C++ STL vector  ÓÅ»¯ 2±¶À©Õ¹±ä1.5±¶À©Õ¹*/
+		while (c->top + size >= c->size)/*å‚è€ƒC++ STL vector  ä¼˜åŒ– 2å€æ‰©å±•å˜1.5å€æ‰©å±•*/
 			c->size += c->size >> 1;
-		void* new_ptr= (char*)realloc(c->stack, c->size);
+		void* new_ptr = (char*)realloc(c->stack, c->size);
 		if (new_ptr == NULL) {
 			free(new_ptr);
 			puts("FISH_CONTEXT_PUSH_CAN_NOT_REALLOC!");
@@ -59,46 +59,48 @@ static void* fish_context_push(fish_context* c, unsigned int size) {
 
 static void fish_stringify_value(fish_context* c, const fish_value* v);
 
-/*µ¯³ö¶ÑÕ»*/
+/*å¼¹å‡ºå †æ ˆ*/
 static void* fish_context_pop(fish_context* c, unsigned int size) {
 	assert(c->top >= size);
 	return c->stack + (c->top -= size);
 }
-/*½âÎö¿Õ°×·û*/
+/*è§£æžç©ºç™½ç¬¦*/
 static void fish_parse_whitespace(fish_context* c) {
-	char *p = c->json;
+	char* p = c->json;
 	while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')
 		p++;
 	c->json = p;
 }
 
-/*½âÎöTRUE*/
-static int fish_parse_true(fish_context* c, fish_value* v){
-	EXPECT(c, 't');//·ÀÓùÐÔ±à³Ì£¬ÔÚfish_parse_valueÖÐÒÑ¾­ÅÐ¶Ï¹ýÁË£¬µ«ÊÇ¶ÔÓÚ¹¦ÄÜº¯Êý»¹ÐèÒª¿¼ÂÇµ¥¶ÀÓ¦ÓÃ³¡¾°£¬ÀýÈçtest.cÎÄ¼þÖÐµÄµ¥Ôª²âÊÔ¡£
+/*è§£æžTRUE*/
+static int fish_parse_true(fish_context* c, fish_value* v) {
+	EXPECT(c, 't');//é˜²å¾¡æ€§ç¼–ç¨‹ï¼Œåœ¨fish_parse_valueä¸­å·²ç»åˆ¤æ–­è¿‡äº†ï¼Œä½†æ˜¯å¯¹äºŽåŠŸèƒ½å‡½æ•°è¿˜éœ€è¦è€ƒè™‘å•ç‹¬åº”ç”¨åœºæ™¯ï¼Œä¾‹å¦‚test.cæ–‡ä»¶ä¸­çš„å•å…ƒæµ‹è¯•ã€‚
 	if (c->json[0] != 'r' || c->json[1] != 'u' || c->json[2] != 'e')
 		return FISH_PARSE_INVALID_VALUE;
 	c->json += 3;
 	v->type = FISH_TRUE;
 	return FISH_PARSE_OK;
 }
-/*½âÎöFALSE*/
-static int fish_parse_false(fish_context* c, fish_value* v){
+/*è§£æžFALSE*/
+static int fish_parse_false(fish_context* c, fish_value* v) {
 	EXPECT(c, 'f');
-	if (c->json[0] != 'a' || c->json[1] != 'l' || c->json[2] != 's'||c->json[3] !='e')
+	if (c->json[0] != 'a' || c->json[1] != 'l' || c->json[2] != 's' || c->json[3] != 'e')
 		return FISH_PARSE_INVALID_VALUE;
 	c->json += 4;
 	v->type = FISH_FALSE;
 	return FISH_PARSE_OK;
 }
 
-/*ÉèÖÃ²¼¶ûÖµ*/
+/*è®¾ç½®å¸ƒå°”å€¼*/
 void fish_set_boolean(fish_value* v, int b) {
 	fish_free(v);
-	v->type = b ? FISH_TRUE : FISH_FALSE;
+	if (b == FISH_TRUE)v->type = FISH_TRUE;
+	else if (b == FISH_FALSE)v->type = FISH_FALSE;
+	else if (b == FISH_NULL)v->type = FISH_NULL;
 }
 
-/*½âÎönull*/
-static int fish_parse_null(fish_context* c, fish_value* v){
+/*è§£æžnull*/
+static int fish_parse_null(fish_context* c, fish_value* v) {
 	EXPECT(c, 'n');
 	if (c->json[0] != 'u' || c->json[1] != 'l' || c->json[2] != 'l')
 		return FISH_PARSE_INVALID_VALUE;
@@ -107,8 +109,8 @@ static int fish_parse_null(fish_context* c, fish_value* v){
 	return FISH_PARSE_OK;
 }
 
-/*ÓÐÏÞ×´Ì¬»úÐ£ÑéÊý×Ö*/
-static int fish_check_number(fish_context* c,int* offset) {
+/*æœ‰é™çŠ¶æ€æœºæ ¡éªŒæ•°å­—*/
+static int fish_check_number(fish_context* c, int* offset) {
 	static const int stateTable[][6] =
 	{//"1-9", "0", "-", '+', ".", "e/E"
 		{ 2,   3,   1,  -1,  -1,  -1 },//#0
@@ -121,7 +123,7 @@ static int fish_check_number(fish_context* c,int* offset) {
 		{ 8,   8,  -1,  -1,  -1,  -1 },//#7
 		{ 8,   8,  -2,  -2,  -2,  -2 },//#8
 	};
-	int i,state = 0;
+	int i, state = 0;
 	for (i = 0; c->json[i] != '\0'; i++)
 	{
 		int input;
@@ -138,11 +140,11 @@ static int fish_check_number(fish_context* c,int* offset) {
 	*offset = i;
 	return state;
 }
-/*½âÎöÊý×Ö*/
+/*è§£æžæ•°å­—*/
 static int fish_parse_number(fish_context* c, fish_value* v) {
-	/*Êý×ÖÐ£ÑéÊÇ·ñ·ûºÏJSONÊý×ÖÀàÐÍµÄÓï·¨ÒªÇó*/
+	/*æ•°å­—æ ¡éªŒæ˜¯å¦ç¬¦åˆJSONæ•°å­—ç±»åž‹çš„è¯­æ³•è¦æ±‚*/
 	int offset = 0;
-	int state = fish_check_number(c,&offset);
+	int state = fish_check_number(c, &offset);
 	if (state == 2 || state == 3 || state == 5 || state == 8 || state == -2)
 	{
 		errno = 0;
@@ -157,14 +159,14 @@ static int fish_parse_number(fish_context* c, fish_value* v) {
 	return FISH_PARSE_INVALID_VALUE;
 }
 
-/*ÉèÖÃÊý×Ö*/
+/*è®¾ç½®æ•°å­—*/
 void fish_set_number(fish_value* v, double n) {
 	fish_free(v);
 	v->n = n;
 	v->type = FISH_NUMBER;
 }
 
-/*½âÎöstring-½âÎö²¿·Ö*/
+/*è§£æžstring-è§£æžéƒ¨åˆ†*/
 static int fish_parse_string_raw(fish_context* c, char** str, unsigned int* len) {
 	unsigned int head = c->top;
 	const char* p;
@@ -210,7 +212,7 @@ static int fish_parse_string_raw(fish_context* c, char** str, unsigned int* len)
 		}
 	}
 }
-/*½âÎö×Ö·û´®-¸´ÖÆµ½vÖÐ*/
+/*è§£æžå­—ç¬¦ä¸²-å¤åˆ¶åˆ°vä¸­*/
 static int fish_parse_string(fish_context* c, fish_value* v) {
 	int ret;
 	char* s;
@@ -220,9 +222,9 @@ static int fish_parse_string(fish_context* c, fish_value* v) {
 	return ret;
 }
 
-/*ÉèÖÃvalueÖÐsµÄÖµ*/
+/*è®¾ç½®valueä¸­sçš„å€¼*/
 void fish_set_string(fish_value* v, const char* s, unsigned int len) {
-	assert(v != NULL && (s != NULL || len == 0)&& v->s != NULL);
+	assert(v != NULL && (s != NULL || len == 0) && v->s != NULL);
 	fish_free(v);
 	v->s = (char*)malloc(len + 1);
 	memcpy(v->s, s, len);
@@ -231,9 +233,9 @@ void fish_set_string(fish_value* v, const char* s, unsigned int len) {
 	v->type = FISH_STRING;
 }
 
-/*½âÎöarray*/
+/*è§£æžarray*/
 static int fish_parse_array(fish_context* c, fish_value* v) {
-	EXPECT(c,'[');
+	EXPECT(c, '[');
 	unsigned int size = 0;
 	int ret;
 	fish_parse_whitespace(c);
@@ -248,12 +250,12 @@ static int fish_parse_array(fish_context* c, fish_value* v) {
 		fish_value e;
 		fish_init(&e);
 		if ((ret = fish_parse_value(c, &e)) != FISH_PARSE_OK)
-			break;//±¨´í²»Ö±½Óreturn£¬ÏÂÃæfree
+			break;//æŠ¥é”™ä¸ç›´æŽ¥returnï¼Œä¸‹é¢free
 		memcpy(fish_context_push(c, sizeof(fish_value)), &e, sizeof(fish_value));
 		size++;
 		fish_parse_whitespace(c);
 		char ch = *c->json;
-		if (ch == ','){
+		if (ch == ',') {
 			c->json++;
 			fish_parse_whitespace(c);
 		}
@@ -265,17 +267,17 @@ static int fish_parse_array(fish_context* c, fish_value* v) {
 			memcpy(v->e = (fish_value*)malloc(size), fish_context_pop(c, size), size);
 			return FISH_PARSE_OK;
 		}
-		else{
+		else {
 			ret = FISH_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
 			break;
 		}
-	}	
+	}
 	for (unsigned int i = 0; i < size; i++)
 		fish_free((fish_value*)fish_context_pop(c, sizeof(fish_value)));
 	return ret;
 }
 
-/*½âÎö¶ÔÏó*/
+/*è§£æžå¯¹è±¡*/
 static int fish_parse_object(fish_context* c, fish_value* v) {
 	EXPECT(c, '{');
 	fish_member m;
@@ -294,17 +296,17 @@ static int fish_parse_object(fish_context* c, fish_value* v) {
 	for (;;) {
 		fish_init(&m.v);
 		char* str;
-		/*½âÎökey*/
+		/*è§£æžkey*/
 		if (*c->json != '"') {
 			ret = FISH_PARSE_MISS_KEY;
 			break;
 		}
-		if ((ret = fish_parse_string_raw(c, &str,&m.key_len)) != FISH_PARSE_OK)
+		if ((ret = fish_parse_string_raw(c, &str, &m.key_len)) != FISH_PARSE_OK)
 			break;
 		memcpy(m.key = (char*)malloc(m.key_len + 1), str, m.key_len);
 		m.key[m.key_len] = '\0';
-		
-		/*½âÎöÃ°ºÅ*/
+
+		/*è§£æžå†’å·*/
 		fish_parse_whitespace(c);
 		if (*c->json != ':') {
 			ret = FISH_PARSE_MISS_COLON;
@@ -313,14 +315,14 @@ static int fish_parse_object(fish_context* c, fish_value* v) {
 		c->json++;
 		fish_parse_whitespace(c);
 
-		/*½âÎövalue*/
+		/*è§£æžvalue*/
 		if ((ret = fish_parse_value(c, &m.v)) != FISH_PARSE_OK)
 			break;
 		memcpy(fish_context_push(c, sizeof(fish_member)), &m, sizeof(fish_member));
 		size++;
 		m.key = NULL;
-		
-		/*½âÎö£¬ }*/
+
+		/*è§£æžï¼Œ }*/
 		fish_parse_whitespace(c);
 		if (*c->json == ',') {
 			c->json++;
@@ -329,7 +331,7 @@ static int fish_parse_object(fish_context* c, fish_value* v) {
 		else if (*c->json == '}') {
 			unsigned int s = sizeof(fish_member) * size;
 			c->json++;
-			v -> type = FISH_OBJECT;
+			v->type = FISH_OBJECT;
 			v->obj_size = size;
 			memcpy(v->m = (fish_member*)malloc(s), fish_context_pop(c, s), s);
 			return FISH_PARSE_OK;
@@ -349,7 +351,7 @@ static int fish_parse_object(fish_context* c, fish_value* v) {
 	return ret;
 }
 
-/*°´Ê××ÖÄ¸·ÖÀà½âÎövalue*/
+/*æŒ‰é¦–å­—æ¯åˆ†ç±»è§£æžvalue*/
 static int fish_parse_value(fish_context* c, fish_value* v) {
 	switch (*c->json) {
 	case 't':	return fish_parse_true(c, v);
@@ -363,13 +365,13 @@ static int fish_parse_value(fish_context* c, fish_value* v) {
 	}
 }
 
-/*JSON-ÎÄ±¾½âÎö */
+/*JSON-æ–‡æœ¬è§£æž */
 int fish_parse(fish_value* v, const char* json) {
 	assert(v != NULL);
 	fish_context c;
 	int ret;
 	c.json = json;
-	/*³õÊ¼»¯*/
+	/*åˆå§‹åŒ–*/
 	c.stack = NULL;
 	c.size = c.top = 0;
 	fish_init(v);
@@ -382,26 +384,26 @@ int fish_parse(fish_value* v, const char* json) {
 			ret = FISH_PARSE_ROOT_NOT_SINGULAR;
 		}
 	}
-	assert(c.top == 0);//¼ì²éÊý¾ÝÊÇ·ñÈ«²¿µ¯³öÁË
+	assert(c.top == 0);//æ£€æŸ¥æ•°æ®æ˜¯å¦å…¨éƒ¨å¼¹å‡ºäº†
 	free(c.stack);
 	return ret;
 }
-/*JSON-ÎÄ±¾½âÎö-ÎÄ¼þ*/
-int fish_parse_file(fish_value* v,const FILE* fp) {
+/*JSON-æ–‡æœ¬è§£æž-æ–‡ä»¶*/
+int fish_parse_file(fish_value* v, const FILE* fp) {
 	assert(v != NULL && fp != NULL);
 	char json[FISH_FILE_BUFFER];
 	fgets(json, FISH_FILE_BUFFER, fp);
 	int ret = fish_parse(v, json);
 	return ret;
 }
-/*Éú³ÉÊý×Ö*/
+/*ç”Ÿæˆæ•°å­—*/
 static void fish_stringify_number(fish_context* c, const fish_value* v) {
-	assert(v != NULL&&v->type==FISH_NUMBER);
+	assert(v != NULL && v->type == FISH_NUMBER);
 	char buf[256];
-	unsigned int length = snprintf(buf,sizeof(buf), "%.17g", v->n);
+	unsigned int length = snprintf(buf, sizeof(buf), "%.17g", v->n);
 	PUTS(c, buf, length);
 }
-/*Éú³É×Ö·û´®*/
+/*ç”Ÿæˆå­—ç¬¦ä¸²*/
 static void fish_stringify_string(fish_context* c, const char* s, unsigned int len) {
 	assert(s != NULL);
 	PUTC(c, '"');
@@ -409,21 +411,21 @@ static void fish_stringify_string(fish_context* c, const char* s, unsigned int l
 		unsigned char ch = s[i];
 		switch (ch)
 		{
-			case '\"': PUTS(c, "\\\"", 2); break;
-			case '\\': PUTS(c, "\\\\", 2); break;
-			case '\b': PUTS(c, "\\b", 2); break;
-			case '\f': PUTS(c, "\\f", 2); break;
-			case '\n': PUTS(c, "\\n", 2); break;
-			case '\r': PUTS(c, "\\r", 2); break;
-			case '\t': PUTS(c, "\\t", 2); break;
-			default:   PUTC(c, s[i]);
+		case '\"': PUTS(c, "\\\"", 2); break;
+		case '\\': PUTS(c, "\\\\", 2); break;
+		case '\b': PUTS(c, "\\b", 2); break;
+		case '\f': PUTS(c, "\\f", 2); break;
+		case '\n': PUTS(c, "\\n", 2); break;
+		case '\r': PUTS(c, "\\r", 2); break;
+		case '\t': PUTS(c, "\\t", 2); break;
+		default:   PUTC(c, s[i]);
 		}
 	}
 	PUTC(c, '"');
 }
-/*Éú³ÉÊý×é*/
+/*ç”Ÿæˆæ•°ç»„*/
 static void fish_stringify_array(fish_context* c, const fish_value* v) {
-	assert(v != NULL&&v->type==FISH_ARRAY);
+	assert(v != NULL && v->type == FISH_ARRAY);
 	PUTC(c, '[');
 	for (unsigned int i = 0; i < v->arr_size; i++) {
 		if (i)PUTC(c, ',');
@@ -431,21 +433,21 @@ static void fish_stringify_array(fish_context* c, const fish_value* v) {
 	}
 	PUTC(c, ']');
 }
-/*Éú³É¶ÔÏó*/
+/*ç”Ÿæˆå¯¹è±¡*/
 static void fish_stringify_object(fish_context* c, const fish_value* v) {
-	assert(v != NULL&&v->type==FISH_OBJECT);
+	assert(v != NULL && v->type == FISH_OBJECT);
 	PUTC(c, '{');
 	for (unsigned int i = 0; i < v->obj_size; i++) {
 		if (i)PUTC(c, ',');
 		fish_stringify_string(c, v->m[i].key, v->m[i].key_len);
 		PUTC(c, ':');
 		fish_stringify_value(c, &v->m[i].v);
-		/*6.3 bug¶¨Î»£¬objectÉú³É²âÊÔ£¬fish_stringify_value´«²Î´íÎó*/
+		/*6.3 bugå®šä½ï¼Œobjectç”Ÿæˆæµ‹è¯•ï¼Œfish_stringify_valueä¼ å‚é”™è¯¯*/
 	}
 	PUTC(c, '}');
 }
 
-/*Éú³Évalue*/
+/*ç”Ÿæˆvalue*/
 static void fish_stringify_value(fish_context* c, const fish_value* v) {
 	assert(v != NULL);
 	switch (v->type) {
@@ -456,11 +458,11 @@ static void fish_stringify_value(fish_context* c, const fish_value* v) {
 	case FISH_STRING:	fish_stringify_string(c, v->s, v->len); break;
 	case FISH_ARRAY:	fish_stringify_array(c, v); break;
 	case FISH_OBJECT:	fish_stringify_object(c, v); break;
-	default:			assert(0 && "invalid type"); 
+	default:			assert(0 && "invalid type");
 	}
 }
 
-/*JSON-ÎÄ±¾Éú³É*/
+/*JSON-æ–‡æœ¬ç”Ÿæˆ*/
 char* fish_stringify(const fish_value* v, unsigned int* length) {
 	assert(v != NULL);
 	fish_context c;
@@ -471,91 +473,91 @@ char* fish_stringify(const fish_value* v, unsigned int* length) {
 	PUTC(&c, '\0');
 	return c.stack;
 }
-/*JSON-ÎÄ±¾Éú³É-·ÅÈëÎÄ¼þ*/
-void fish_stringify_file(const fish_value* v,FILE* fp) {
-	assert(v != NULL&&fp!=NULL);
+/*JSON-æ–‡æœ¬ç”Ÿæˆ-æ”¾å…¥æ–‡ä»¶*/
+void fish_stringify_file(const fish_value* v, FILE* fp) {
+	assert(v != NULL && fp != NULL);
 	unsigned int length;
 	char* json2 = fish_stringify(v, &length);
 	fputs(json2, fp);
 	fclose(fp);
 }
-/*ÄÚ´æ¹ÜÀí*/
-void fish_free(fish_value* v){
+/*å†…å­˜ç®¡ç†*/
+void fish_free(fish_value* v) {
 	assert(v != NULL);
 	switch (v->type) {
-		case FISH_STRING:	
-			free(v->s);
-			break;
-		case FISH_ARRAY:
-			for (unsigned int i = 0; i < v->arr_size; i++)
-				fish_free(&v->e[i]);
-			free(v->e);
-			break;
-		case FISH_OBJECT:
-			for (unsigned int i = 0; i < v->obj_size; i++) {
-				free(v->m[i].key);
-				fish_free(&v->m[i].v);
-			}
-			free(v->m);
-			break;
-		default: break;
+	case FISH_STRING:
+		free(v->s);
+		break;
+	case FISH_ARRAY:
+		for (unsigned int i = 0; i < v->arr_size; i++)
+			fish_free(&v->e[i]);
+		free(v->e);
+		break;
+	case FISH_OBJECT:
+		for (unsigned int i = 0; i < v->obj_size; i++) {
+			free(v->m[i].key);
+			fish_free(&v->m[i].v);
+		}
+		free(v->m);
+		break;
+	default: break;
 	}
-	v->type = FISH_NULL;//±ÜÃâÖØ¸´ÊÍ·Å ¹·ÅÆ±ê¼Ç
+	v->type = FISH_NULL;//é¿å…é‡å¤é‡Šæ”¾ ç‹—ç‰Œæ ‡è®°
 }
 
-/* »ñÈ¡½á¹¹Ìåfish_valueÀïµÄÐÅÏ¢ */
+/* èŽ·å–ç»“æž„ä½“fish_valueé‡Œçš„ä¿¡æ¯ */
 
-/*»ñÈ¡ÀàÐÍ*/
+/*èŽ·å–ç±»åž‹*/
 fish_type fish_get_type(const fish_value* v) {
-    assert(v != NULL);
-    return v->type;
+	assert(v != NULL);
+	return v->type;
 }
-/*»ñÈ¡Êý×Ö*/
+/*èŽ·å–æ•°å­—*/
 double fish_get_number(const fish_value* v) {
 	assert(v != NULL && v->type == FISH_NUMBER);
 	return v->n;
 }
-/*»ñÈ¡boolÖµ*/
+/*èŽ·å–boolå€¼*/
 int fish_get_boolean(const fish_value* v) {
 	assert(v != NULL && (v->type == FISH_TRUE || v->type == FISH_FALSE));
-	return v->type==FISH_TRUE;
+	return v->type == FISH_TRUE;
 }
-/*»ñÈ¡×Ö·û´®*/
+/*èŽ·å–å­—ç¬¦ä¸²*/
 const char* fish_get_string(const fish_value* v) {
 	assert(v != NULL && v->type == FISH_STRING);
 	return v->s;
 }
-/*»ñÈ¡×Ö·û´®³¤¶È*/
+/*èŽ·å–å­—ç¬¦ä¸²é•¿åº¦*/
 unsigned int fish_get_stringlen(const fish_value* v) {
 	assert(v != NULL && v->type == FISH_STRING);
 	return v->len;
 }
-/*»ñÈ¡Êý×é´óÐ¡*/
+/*èŽ·å–æ•°ç»„å¤§å°*/
 unsigned int fish_get_array_size(const fish_value* v) {
 	assert(v != NULL && v->type == FISH_ARRAY);
 	return v->arr_size;
 }
-/*»ñÈ¡Êý×éÏÂ±êÎªposµÄÔªËØµÄÖ¸Õë*/
+/*èŽ·å–æ•°ç»„ä¸‹æ ‡ä¸ºposçš„å…ƒç´ çš„æŒ‡é’ˆ*/
 fish_value* fish_get_array_element(const fish_value* v, unsigned int pos) {
-	assert(v != NULL && v->type == FISH_ARRAY && pos<v->arr_size);
+	assert(v != NULL && v->type == FISH_ARRAY && pos < v->arr_size);
 	return &v->e[pos];
 }
-/*»ñÈ¡¶ÔÏó´óÐ¡*/
+/*èŽ·å–å¯¹è±¡å¤§å°*/
 unsigned int fish_get_object_size(const fish_value* v) {
 	assert(v != NULL && v->type == FISH_OBJECT);
 	return v->obj_size;
 }
-/*»ñÈ¡¶ÔÏóÏÂ±êÎªposµÄkeyµÄÖ¸Õë*/
+/*èŽ·å–å¯¹è±¡ä¸‹æ ‡ä¸ºposçš„keyçš„æŒ‡é’ˆ*/
 const char* fish_get_object_key(const fish_value* v, unsigned int pos) {
 	assert(v != NULL && v->type == FISH_OBJECT && pos < v->obj_size);
 	return v->m[pos].key;
 }
-/*»ñÈ¡¶ÔÏóÏÂ±êÎªposµÄkeyµÄ³¤¶È*/
+/*èŽ·å–å¯¹è±¡ä¸‹æ ‡ä¸ºposçš„keyçš„é•¿åº¦*/
 unsigned int fish_get_object_key_len(const fish_value* v, unsigned int pos) {
 	assert(v != NULL && v->type == FISH_OBJECT && pos < v->obj_size);
 	return v->m[pos].key_len;
 }
-/*»ñÈ¡¶ÔÏóÏÂ±êÎªposµÄvµÄÖ¸Õë*/
+/*èŽ·å–å¯¹è±¡ä¸‹æ ‡ä¸ºposçš„vçš„æŒ‡é’ˆ*/
 fish_value* fish_get_object_value(const fish_value* v, unsigned int pos) {
 	assert(v != NULL && v->type == FISH_OBJECT && pos < v->obj_size);
 	return &v->m[pos].v;
